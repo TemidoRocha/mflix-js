@@ -302,34 +302,34 @@ export default class MoviesDAO {
       // Implement the required pipeline.
       const pipeline = [
         {
+          // find the current movie in the "movies" collection
           $match: {
             _id: ObjectId(id),
           },
         },
         {
+          // lookup comments from the "comments" collection
           $lookup: {
             from: "comments",
-            localField: "_id",
-            foreignField: "movie_id",
+            let: { id: "$_id" },
+            pipeline: [
+              {
+                // only join comments with a match movie_id
+                $match: {
+                  $expr: {
+                    $eq: ["$movie_id", "$$id"],
+                  },
+                },
+              },
+              {
+                // sort by date in descending order
+                $sort: {
+                  date: -1,
+                },
+              },
+            ],
+            // call embedded field comments
             as: "comments",
-          },
-        },
-        {
-          $unwind: {
-            path: "$comments",
-            preserveNullAndEmptyArrays: true,
-          },
-        },
-        {
-          $sort: {
-            "comments.date": -1,
-          },
-        },
-        {
-          $group: {
-            _id: "$_id",
-            title: { $first: "$title" },
-            comments: { $push: "$comments" },
           },
         },
       ]
